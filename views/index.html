@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>web-nes</title>
+        <script type="text/javascript" src="/js/jsnes.min.js"></script>
+    </head>
+    <body>
+        <div id="content">
+            <div style="margin: auto; width: 75%;">
+                <canvas id="canvas" width="256" height="240" style="width: 80%"></canvas>
+            </div>
+        </div>
+        <script>
+
+            // 连接服务器
+            ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+            // 接收消息
+            window.player = 0;
+            ws.onmessage = function (msg) {
+                alert(msg)
+            };
+
+            /*
+
+            // 游戏屏幕宽
+            var screenWidth = 256;
+
+            // 游戏屏幕高
+            var screenHeight = 240;
+
+            // 游戏缓冲区大小
+            var frameBufferSize = screenWidth * screenHeight;
+
+            // 音频参数
+            var audioBufferSize = 512;
+            var sampleCount = 4 * 1024;
+            var sampleMask = sampleCount - 1;
+            var audioSamplesLeft = new Float32Array(sampleCount);
+            var audioSamplesRight = new Float32Array(sampleCount);
+
+            // 音频数据写入大小
+            var audioWriteCursor = 0;
+
+            // 音频数据读取大小
+            var audioReadCursor = 0;
+
+            // 创建绘图环境
+            var canvas = document.getElementById('canvas');
+            var canvasCtx = canvas.getContext('2d');
+
+            // 复制画布上的像素信息
+            var image = canvasCtx.getImageData(0, 0, screenWidth, screenHeight);
+
+            // 画布填充颜色
+            canvasCtx.fillStyle = 'black';
+
+            // 画布填充区域
+            canvasCtx.fillRect(0, 0, screenWidth, screenHeight);
+
+            // 分配运行缓冲区空间
+            var buffer = new ArrayBuffer(image.data.length);
+            var frameBufferUint8 = new Uint8ClampedArray(buffer);
+            var frameBufferUint32 = new Uint32Array(buffer);
+
+            // 处理音频
+            var audioCtx = ctx = new(window.AudioContext || window.webkitAudioContext);
+            var scriptProcessor = audioCtx.createScriptProcessor(audioBufferSize, 0, 2);
+            scriptProcessor.onaudioprocess = function (ev) {
+
+                var dst = ev.outputBuffer;
+                var len = dst.length;
+
+                // Attempt to avoid buffer underruns.
+                if((audioWriteCursor - audioReadCursor) & sampleMask < audioBufferSize) {
+                    nes.frame();
+                }
+
+                var dstLeft = dst.getChannelData(0);
+                var dstRight = dst.getChannelData(1);
+                for(var i = 0; i < len; i++){
+                    var srcIndex = (audioReadCursor + i) & sampleMask;
+                    dstLeft[i] = audioSamplesLeft[srcIndex];
+                    dstRight[i] = audioSamplesRight[srcIndex];
+                }
+
+                audioReadCursor = (audioReadCursor + len) & sampleMask;
+            };
+            scriptProcessor.connect(audioCtx.destination);
+
+            // 实例NES模拟器
+            var nes = new jsnes.NES({
+                onFrame: function (frameBuffer24) {
+                    for (var i = 0; i < frameBufferSize; i++) {
+                        frameBufferUint32[i] = 0xFF000000 | frameBuffer24[i];
+                    }
+                },
+                onAudioSample: function (left, right) {
+                    audioSamplesLeft[audioWriteCursor] = left;
+                    audioSamplesRight[audioWriteCursor] = right;
+                    audioWriteCursor = (audioWriteCursor + 1) & sampleMask;
+                }
+            });
+
+            // 启动nes模拟器
+            function nesBoot(rom) {
+                nes.loadROM(rom);
+
+                // 告诉浏览器希望执行一个动画
+                // 要求浏览器在下次重绘之前调用指定的回调函数更新动画
+                window.requestAnimationFrame(onAnimationFrame);
+            }
+
+            // 浏览器执行更新动画回调函数
+            function onAnimationFrame() {
+                window.requestAnimationFrame(onAnimationFrame);
+
+                image.data.set(frameBufferUint8);
+                canvasCtx.putImageData(image, 0, 0);
+                ws.send("data " + canvas.toDataURL());
+                nes.frame();
+            }
+
+            // 加载游戏rom
+            var request = new XMLHttpRequest();
+            request.open('GET', '/roms/contra.nes');
+            request.overrideMimeType('text/plain; charset=x-user-defined');
+            request.onerror = function () {
+                alert('http request error!');
+            };
+            request.onload = function () {
+                if (this.status === 200) {
+                    nesBoot(this.responseText);
+                } else {
+                    this.onerror();
+                }
+            };
+            request.send();
+
+            // 键盘映射
+            function keyboard(callback, event, player) {
+                switch (event.keyCode) {
+
+                    // Up
+                    case 87:
+                        callback(player, jsnes.Controller.BUTTON_UP);
+                        break;
+
+                    // Down
+                    case 83:
+                        callback(player, jsnes.Controller.BUTTON_DOWN);
+                        break;
+
+                    // Left
+                    case 65:
+                        callback(player, jsnes.Controller.BUTTON_LEFT);
+                        break;
+
+                    // Right
+                    case 68:
+                        callback(player, jsnes.Controller.BUTTON_RIGHT);
+                        break;
+
+                    // 'a' - qwerty, dvorak
+                    // case 65:
+
+                    // 'q' - azerty
+                    case 75:
+                        callback(player, jsnes.Controller.BUTTON_A);
+                        break;
+
+                    // 's' - qwerty, azerty
+                    // case 83:
+
+                    // 'o' - dvorak
+                    case 74:
+                        callback(player, jsnes.Controller.BUTTON_B);
+                        break;
+
+                    // Tab
+                    case 86:
+                        callback(player, jsnes.Controller.BUTTON_SELECT);
+                        break;
+
+                    // Return
+                    case 66:
+                        callback(player, jsnes.Controller.BUTTON_START);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            // 连接服务器
+            ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+            // 接收消息
+            window.player = 0;
+            ws.onmessage = function (msg) {
+
+                // 分解命令和消息
+                var parts = msg.data.split(" ");
+                var cmd = parts[0];
+                var data = parts[1];
+
+                switch (cmd) {
+
+                    // 加入玩家
+                    case 'join':
+                        window.player = parseInt(data, 10);
+                        alert(window.player);
+                        break;
+
+                    // 键盘按下事件
+                    case 'down':
+                        keyboard(nes.buttonDown, parseInt(data, 10), 2);
+                        break;
+
+                    // 键盘抬起事件
+                    case 'up':
+                        keyboard(nes.buttonUp(), parseInt(data, 10), 2);
+                        break;
+
+                    // 游戏画面数据
+                    case 'data':
+                        var img = new Image();
+                        img.src = data;
+                        canvasCtx.putImageData(img.data ,0 ,0);
+                        break;
+                }
+            };
+
+            // 按键列表
+            var keyCodeArray = [
+                87, 83, 65, 68, 75, 74, 86, 66
+            ];
+
+            // 键盘按下事件
+            document.addEventListener('keydown', function (evt) {
+
+                var keyCode = evt.keyCode;
+                if (window.player === 1) {
+                    keyboard(nes.buttonDown, keyCode, window.player)
+                }
+
+                // 玩家2发送数据给玩家1
+                if (window.player === 2 && keyCodeArray.indexOf(keyCode) > -1) {
+                    evt.preventDefault();
+                    ws.send("down "+keyCode);
+                }
+
+            });
+
+            // 键盘抬起事件
+            document.addEventListener('keyup', function (evt) {
+
+                var keyCode = evt.keyCode;
+
+                if (window.player === 1) {
+                    keyboard(nes.buttonUp, keyCode, window.player)
+                }
+
+                // 玩家2发送数据给玩家1
+                if (window.player === 2 && keyCodeArray.indexOf(keyCode) > -1) {
+                    evt.preventDefault();
+                    ws.send("up "+keyCode);
+                }
+
+            });
+            */
+
+        </script>
+    </body>
+</html>
