@@ -40,7 +40,10 @@ func index(ctx *gin.Context) {
 }
 
 // websocket
-var upgrader *websocket.Upgrader
+var upgrader = websocket.Upgrader{
+	ReadBufferSize: 32 * 1024,
+	WriteBufferSize: 32 * 1024,
+}
 
 // 游戏通信
 func ws(ctx *gin.Context) {
@@ -53,8 +56,11 @@ func ws(ctx *gin.Context) {
 	}
 
 	// 玩家实例
-	people := &game.People{Conn:conn}
+	people := &game.People{
+		Conn: conn,
+		SendChan: make(chan []byte, 256),
+	}
 
 	// 进入游戏房间
-	room.Enter(people)
+	room.EnterChan <- people
 }

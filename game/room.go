@@ -23,6 +23,12 @@ type Room struct {
 	// 玩家加入游戏通道
 	join chan interface{}
 
+	// 进入房间通道
+	EnterChan chan *People
+
+	// 退出房间通道
+	ExitChan chan *People
+
 	// 锁
 	mutex sync.Mutex
 }
@@ -34,16 +40,13 @@ func (r *Room) Create() {
 	r.JoinListener()
 
 	// 玩家状态监听
-	r.PlayerListener()
+	// r.PlayerListener()
 }
 
 // 设置玩家1
 func (r *Room) SetOwner(p *People) (err error) {
 	if p != nil {
-		err = p.Send("join 1")
-		if err != nil {
-			return
-		}
+		p.Send("join 1")
 	}
 	r.owner = p
 	return
@@ -52,10 +55,7 @@ func (r *Room) SetOwner(p *People) (err error) {
 // 设置玩家2
 func (r *Room) SetPlayer(p *People) (err error) {
 	if p != nil {
-		err = p.Send("join 2")
-		if err != nil {
-			return
-		}
+		p.Send("join 2")
 	}
 	r.player = p
 	return
@@ -131,25 +131,29 @@ func (r *Room) JoinListener() {
 }
 
 // 玩家状态监听
-func (r *Room) PlayerListener()  {
-
-	for {
-
-		r.mutex.Lock()
-
-		if r.owner != nil && r.owner.Send("ping") != nil {
-			r.owner = nil
-		}
-
-		if r.player != nil && r.player.Send("ping") != nil {
-			r.player = nil
-		}
-
-		r.mutex.Unlock()
-
-		time.Sleep(1 * time.Second)
-	}
-}
+// func (r *Room) PlayerListener()  {
+//
+// 	go func() {
+//
+// 		for {
+//
+// 			r.mutex.Lock()
+//
+// 			if r.owner != nil && r.owner.Send("ping") != nil {
+// 				r.owner = nil
+// 			}
+//
+// 			if r.player != nil && r.player.Send("ping") != nil {
+// 				r.player = nil
+// 			}
+//
+// 			r.mutex.Unlock()
+//
+// 			time.Sleep(1 * time.Second)
+// 		}
+// 	}()
+//
+// }
 
 // 玩家进入房间
 func (r *Room) Enter(people *People) {
@@ -159,6 +163,9 @@ func (r *Room) Enter(people *People) {
 
 	// 加入观战
 	r.watchers[people] = nil
+
+	// 设置用户房间
+	people.Room = r
 }
 
 // 玩家退出房间
