@@ -120,10 +120,16 @@ func (r *Room) playerReadHandle() func(message []byte) {
 // 若队列为空阻塞直到队列有值
 func (r *Room) blockGetHead() *People {
 
+	// 从排队中取出
 	people := r.queue.Pop()
 	for people == nil {
 		time.Sleep(1 * time.Second)
 		people = r.queue.Pop()
+	}
+
+	// 从观战列表删除
+	if _, ok := r.watchers[people]; ok {
+		delete(r.watchers, people)
 	}
 
 	return people
