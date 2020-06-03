@@ -2,7 +2,6 @@ package game
 
 import (
 	"github.com/gorilla/websocket"
-	"sync"
 	"time"
 )
 
@@ -26,18 +25,21 @@ const (
 type People struct {
 	Conn *websocket.Conn
 	Room *Room
-	Partner *People
 	next *People
 	prev *People
-	SendChan chan []byte
-	Mutex sync.Mutex
+	send chan *Message
+	ReadHandle func (message []byte)
 }
 
 // 读取消息逻辑
 func (p *People) ReadPump() {
 
 	defer func() {
-		p.Room.ExitChan <- p
+
+		// 从房间退出
+		p.Room.Exit <- p
+
+		// 关闭websocket链接
 		if err := p.Conn.Close(); err != nil {
 
 		}
@@ -70,13 +72,13 @@ func (p *People) ReadPump() {
 		}
 
 		// 发送消息给客户端
-		p.Send(message)
+		p.ReadHandle(message)
 	}
 }
 
 // 发送消息
-func (p *People) Send(message []byte) {
-	p.SendChan <-message
+func (p *People) Send(message *Message) {
+	p.send <- message
 }
 
 // 消息发送处理逻辑
@@ -99,7 +101,7 @@ func (p *People) SendPump() {
 	for {
 
 		select {
-		case message, ok := <-p.SendChan:
+		case message, ok := <-p.send:
 
 			// 设置写超时
 			if err := p.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
@@ -113,17 +115,10 @@ func (p *People) SendPump() {
 				return
 			}
 
-			// 写消息实例
-			// 用于批量发送消息
-			writer, err := p.Conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			_, _= writer.Write(message)
-
 			// 发送消息
-			if writer.Close() != nil {
-				return
+			err := p.Conn.WriteMessage(websocket.TextMessage, message.data);
+			if  err != nil {
+
 			}
 
 		case <-ticker.C:
@@ -143,6 +138,19 @@ func (p *People) SendPump() {
 
 // 用户退出
 func (p *People) Exit() {
-	close(p.SendChan)
+	close(p.send)
+}
+
+func NewPeople(conn *websocket.Conn) *People {
+
+	p := &People{
+		Conn: conn,
+		send: make(chan *Message, 256),
+	}
+
+	go p.ReadPump()
+	go p.SendPump()
+
+	return p
 }
 

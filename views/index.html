@@ -19,10 +19,8 @@
             // 接收消息
             window.player = 0;
             ws.onmessage = function (msg) {
-                var messages = msg.data.split('\n');
-                for (var i = 0; i < messages.length; i++) {
-                    alert(messages[i]);
-                }
+                alert(msg.data)
+                // console.log(msg)
             };
 
             /*

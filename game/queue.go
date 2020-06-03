@@ -12,20 +12,20 @@ type Queue struct {
 }
 
 // 玩家加入排队
-func (q *Queue) Push (p *People) {
+func (q *Queue) Push (people *People) {
 
 	q.mutex.Lock()
 
 	if q.head == nil {
-		q.head = p
+		q.head = people
 	}
 
 	if q.tail != nil {
-		p.prev = q.tail
-		q.tail.next = p
+		people.prev = q.tail
+		q.tail.next = people
 	}
 
-	q.tail = p
+	q.tail = people
 
 	q.mutex.Unlock()
 }
@@ -33,12 +33,19 @@ func (q *Queue) Push (p *People) {
 // 获取队列头部玩家
 func (q *Queue) Pop() *People {
 
+	if q.head == nil {
+		return nil
+	}
+
 	q.mutex.Lock()
 
 	head := q.head
 
 	if head != nil {
 		q.head = head.next
+	}
+
+	if q.head != nil {
 		q.head.prev = nil
 	}
 
@@ -63,8 +70,13 @@ func (q *Queue) Del(people *People) {
 	prev := people.prev
 	next := people.next
 
-	prev.next = next
-	next.prev = prev
+	if prev != nil && prev.next != nil {
+		prev.next = next
+	}
+
+	if next != nil && next.prev != nil {
+		next.prev = prev
+	}
 
 	q.mutex.Unlock()
 }

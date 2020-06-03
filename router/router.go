@@ -9,13 +9,13 @@ import (
 )
 
 // 游戏房间实例
-var room *game.Room
+var room = game.NewRoom()
 
 // 初始路由
 func InitRouter() *gin.Engine {
 
 	// 初始化游戏
-	room = game.Step()
+	room = game.NewRoom()
 
 	// 路由实例
 	r := gin.Default()
@@ -56,11 +56,8 @@ func ws(ctx *gin.Context) {
 	}
 
 	// 玩家实例
-	people := &game.People{
-		Conn: conn,
-		SendChan: make(chan []byte, 256),
-	}
+	people := game.NewPeople(conn)
 
 	// 进入游戏房间
-	room.EnterChan <- people
+	room.Enter <- people
 }
