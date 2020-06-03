@@ -18,17 +18,16 @@ const (
 
 	// 消息最大长度
 	maxMessageSize = 24 * 1024
-
 )
 
 // 玩家实例
 type People struct {
-	Conn *websocket.Conn
-	Room *Room
-	next *People
-	prev *People
-	send chan *Message
-	ReadHandle func (message []byte)
+	Conn       *websocket.Conn
+	Room       *Room
+	next       *People
+	prev       *People
+	send       chan *Message
+	ReadHandle func(message []byte)
 }
 
 // 读取消息逻辑
@@ -116,8 +115,8 @@ func (p *People) SendPump() {
 			}
 
 			// 发送消息
-			err := p.Conn.WriteMessage(websocket.TextMessage, message.data);
-			if  err != nil {
+			err := p.Conn.WriteMessage(websocket.TextMessage, message.data)
+			if err != nil {
 
 			}
 
@@ -153,4 +152,3 @@ func NewPeople(conn *websocket.Conn) *People {
 
 	return p
 }
-

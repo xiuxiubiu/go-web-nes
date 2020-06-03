@@ -41,7 +41,7 @@ func index(ctx *gin.Context) {
 
 // websocket
 var upgrader = websocket.Upgrader{
-	ReadBufferSize: 32 * 1024,
+	ReadBufferSize:  32 * 1024,
 	WriteBufferSize: 32 * 1024,
 }
 

@@ -29,7 +29,7 @@ var msgTypeMap = map[msgType]interface{}{
 	mtJoin: nil,
 	mtData: nil,
 	mtDown: nil,
-	mtUp: nil,
+	mtUp:   nil,
 }
 
 type Message struct {
@@ -61,9 +61,7 @@ func NewMessage(message []byte) *Message {
 	}
 
 	return &Message{
-		mt: mt,
+		mt:   mt,
 		data: message,
 	}
 }
-
-

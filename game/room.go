@@ -140,7 +140,7 @@ func (r *Room) JoinListener() {
 
 	for {
 
-		<- r.join
+		<-r.join
 
 		// 如果玩家1和2都不为nil
 		// 等待玩家监听协程将已退出玩家设置为nil
@@ -160,7 +160,7 @@ func (r *Room) JoinListener() {
 		// 或者
 		// 等待玩家监听协程将玩家2设置为nil
 		for r.player != nil {
-			if  r.setOwner(r.player) != nil {
+			if r.setOwner(r.player) != nil {
 				continue
 			}
 			_ = r.setPlayer(nil)
@@ -195,7 +195,7 @@ func (r *Room) Manager() {
 		select {
 
 		// 用户加入
-		case people := <- r.Enter:
+		case people := <-r.Enter:
 
 			// 加入排队
 			r.queue.Push(people)
@@ -212,7 +212,7 @@ func (r *Room) Manager() {
 			}
 
 		// 用户退出
-		case people := <- r.Exit:
+		case people := <-r.Exit:
 
 			if people == r.owner {
 
@@ -239,7 +239,7 @@ func (r *Room) Manager() {
 			people.Exit()
 
 		// 广播信息
-		case message := <- r.broadcast:
+		case message := <-r.broadcast:
 			for people := range r.watchers {
 				select {
 				case people.send <- NewMessage(message):
@@ -256,11 +256,11 @@ func NewRoom() *Room {
 
 	// 房间实例
 	room := &Room{
-		queue: &Queue{},
-		watchers: map[*People]interface{}{},
-		join: make(chan interface{}, 2),
-		Enter: make(chan *People, 256),
-		Exit: make(chan *People, 256),
+		queue:     &Queue{},
+		watchers:  map[*People]interface{}{},
+		join:      make(chan interface{}, 2),
+		Enter:     make(chan *People, 256),
+		Exit:      make(chan *People, 256),
 		broadcast: make(chan []byte, 256),
 	}
 

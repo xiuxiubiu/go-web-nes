@@ -11,7 +11,7 @@ func main() {
 	r := router.InitRouter()
 
 	srv := &http.Server{
-		Addr: ":8181",
+		Addr:    ":8181",
 		Handler: r,
 	}
 
@@ -19,5 +19,3 @@ func main() {
 		log.Fatal("listen: %\n", err)
 	}
 }
-
-

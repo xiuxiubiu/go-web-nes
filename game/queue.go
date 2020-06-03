@@ -6,13 +6,13 @@ import (
 
 // 等待游戏排队队列
 type Queue struct {
-	head *People
-	tail *People
+	head  *People
+	tail  *People
 	mutex sync.Mutex
 }
 
 // 玩家加入排队
-func (q *Queue) Push (people *People) {
+func (q *Queue) Push(people *People) {
 
 	q.mutex.Lock()
 
