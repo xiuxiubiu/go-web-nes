@@ -37,7 +37,7 @@ type Room struct {
 }
 
 // 设置玩家1
-func (r *Room) SetOwner(p *People) (err error) {
+func (r *Room) setOwner(p *People) (err error) {
 
 	if p != nil {
 		p.Send(NewMessage([]byte("join 1")))
@@ -78,7 +78,7 @@ func (r *Room) ownerReadHandle() func(message []byte) {
 }
 
 // 设置玩家2
-func (r *Room) SetPlayer(p *People) (err error) {
+func (r *Room) setPlayer(p *People) (err error) {
 
 	if p != nil {
 		p.Send(NewMessage([]byte("join 2")))
@@ -118,7 +118,7 @@ func (r *Room) playerReadHandle() func(message []byte) {
 
 // 获取等待队列的头部玩家
 // 若队列为空阻塞直到队列有值
-func (r *Room) BlockGetHead() *People {
+func (r *Room) blockGetHead() *People {
 
 	people := r.queue.Pop()
 	for people == nil {
@@ -143,7 +143,7 @@ func (r *Room) JoinListener() {
 		}
 
 		// 获取队列头部玩家
-		people := r.BlockGetHead()
+		people := r.blockGetHead()
 
 		// 加锁防止与玩家监听协程冲突
 		r.mutex.Lock()
@@ -154,10 +154,10 @@ func (r *Room) JoinListener() {
 		// 或者
 		// 等待玩家监听协程将玩家2设置为nil
 		for r.player != nil {
-			if  r.SetOwner(r.player) != nil {
+			if  r.setOwner(r.player) != nil {
 				continue
 			}
-			_ = r.SetPlayer(nil)
+			_ = r.setPlayer(nil)
 		}
 
 		// 如果玩家1为空设置玩家1
@@ -165,14 +165,14 @@ func (r *Room) JoinListener() {
 		if r.owner == nil {
 
 			// 设置玩家1不成功
-			if r.SetOwner(people) != nil {
+			if r.setOwner(people) != nil {
 				r.join <- nil
 			}
 
 		} else {
 
 			// 设置玩家2不成功
-			if r.SetPlayer(people) != nil {
+			if r.setPlayer(people) != nil {
 				r.join <- nil
 			}
 		}
@@ -208,12 +208,25 @@ func (r *Room) Manager() {
 		// 用户退出
 		case people := <- r.Exit:
 
-			// 从队列退出
-			r.queue.Del(people)
+			if people == r.owner {
 
-			// 从观战中退出
-			if _, ok := r.watchers[people]; ok {
-				delete(r.watchers, people)
+				_ = r.setOwner(nil)
+				r.join <- nil
+
+			} else if people == r.player {
+
+				_ = r.setPlayer(nil)
+				r.join <- nil
+
+			} else {
+
+				// 从队列退出
+				r.queue.Del(people)
+
+				// 从观战中退出
+				if _, ok := r.watchers[people]; ok {
+					delete(r.watchers, people)
+				}
 			}
 
 			// 用户退出

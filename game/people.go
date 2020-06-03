@@ -8,13 +8,13 @@ import (
 const (
 
 	// 消息发送超时时间
-	writeWait = 10 * time.Second
+	writeWait = 3 * time.Second
 
 	// ping发送间隔时间
-	pingWait = (pongWait / 10) * 9
+	pingWait = (pongWait / 5) * 4
 
 	// pong接收间隔时间
-	pongWait = 60 * time.Second
+	pongWait = 5 * time.Second
 
 	// 消息最大长度
 	maxMessageSize = 24 * 1024
