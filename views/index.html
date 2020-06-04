@@ -3,27 +3,141 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>web-nes</title>
+        <script type="text/javascript" src="/js/jquery-3.5.1.min.js"></script>
         <script type="text/javascript" src="/js/jsnes.min.js"></script>
+        <style>
+            canvas {
+                zoom: 300%;
+                -moz-transform: scale(3);
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+            }
+
+            #content {
+                margin: 0 auto;
+                width: 768px;
+                text-align: center;
+            }
+
+            #message {
+                font-family: sans-serif;
+                padding: 30px;
+                font-weight: 500;
+            }
+
+            #keys {
+                font-size: 14px;
+                font-family: sans-serif;
+                padding-bottom: 15px;
+            }
+
+            #games-list {
+                padding-bottom: 15px;
+            }
+        </style>
     </head>
     <body>
         <div id="content">
-            <div style="margin: auto; width: 75%;">
-                <canvas id="canvas" width="256" height="240" style="width: 80%"></canvas>
+            <h1 id="message"> </h1>
+            <p id="games-list">
+                <select id="current-game" disabled>
+                    <option value="" disabled="disabled" selected="selected">Please select a game</option>
+                </select>
+            </p>
+            <p id="keys">W = 上, S = 下, A = 左, D = 右, V = 选择, B = 开始, J = 跳, K = 开枪</p>
+            <div id="emulator">
+                <canvas id="canvas" width="256" height="240" style="border: 1px"></canvas>
             </div>
         </div>
         <script>
 
-            // 连接服务器
-            ws = new WebSocket("ws://" + window.location.host + "/ws");
+            $(() => {
 
-            // 接收消息
-            window.player = 0;
-            ws.onmessage = function (msg) {
-                alert(msg.data)
-                // console.log(msg)
-            };
+                // 连接服务器
+                ws = new WebSocket("ws://" + window.location.host + "/ws");
 
-            /*
+                ws.onmessage = (msg) => {
+
+                    // 分解命令和消息
+                    var parts = msg.data.split(" ");
+                    var cmd = parts[0];
+                    var data = parts[1];
+
+                    switch (cmd) {
+
+                        // 加入游戏
+                        case 'join':
+
+                            window.player = parseInt(data, 10);
+                            if (window.player === 1) {
+                                $('#message').text('请等待玩家2')
+                            }
+                            if (window.player === 2) {
+                                $('#message').text('请等待玩家1开始游戏')
+                            }
+
+                            break;
+
+                        // 开始游戏
+                        case 'start':
+
+                            $('#message').text('请选择游戏');
+                            loadGames();
+
+                            break;
+
+                        // 键盘按下事件
+                        case 'down':
+                            keyboard(nes.buttonDown, parseInt(data, 10), 2);
+                            break;
+
+                        // 键盘抬起事件
+                        case 'up':
+                            keyboard(nes.buttonUp(), parseInt(data, 10), 2);
+                            break;
+
+                        // 游戏画面数据
+                        case 'data':
+                            var img = new Image();
+                            img.src = data;
+                            canvasCtx.putImageData(img.data ,0 ,0);
+                            break;
+
+
+                    }
+                };
+
+                // 加载游戏列表
+                let loadGames = () => {
+
+                    $.get(
+                        '/list',
+                        (data, status) => {
+
+                            if (status !== 'success') {
+                                alert('加载游戏列表失败，请刷新页面！');
+                                throw Error('加载游戏列表失败，请刷新页面！');
+                            }
+
+                            let options = '';
+                            for (i = 0; i < data.length; i++) {
+                                options += '<option value="'+data[i]+'">'+data[i]+'</option>';
+                            }
+                            $('#current-game').append(options)
+                        },
+                        'json'
+                    );
+
+                };
+            })
+
+
+
+/*
+
 
             // 游戏屏幕宽
             var screenWidth = 256;
@@ -270,8 +384,7 @@
                 }
 
             });
-            */
-
+*/
         </script>
     </body>
 </html>

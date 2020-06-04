@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/gorilla/websocket"
+	"sync"
 	"time"
 )
 
@@ -22,12 +23,30 @@ const (
 
 // 玩家实例
 type People struct {
-	Conn       *websocket.Conn
-	Room       *Room
-	next       *People
-	prev       *People
-	send       chan *Message
+
+	// websocket链接实例
+	Conn *websocket.Conn
+
+	// 房间实例
+	Room *Room
+
+	// 排在玩家后的玩家
+	next *People
+
+	// 排在玩家前的玩家
+	prev *People
+
+	// 消息发送通道
+	send chan *Message
+
+	// 消息读取处理方法
 	ReadHandle func(message []byte)
+
+	// 玩家是否退出
+	isExit bool
+
+	// 锁
+	mutex sync.Mutex
 }
 
 // 读取消息逻辑
@@ -77,7 +96,14 @@ func (p *People) ReadPump() {
 
 // 发送消息
 func (p *People) Send(message *Message) {
-	p.send <- message
+
+	p.mutex.Lock()
+
+	if !p.isExit {
+		p.send <- message
+	}
+
+	p.mutex.Unlock()
 }
 
 // 消息发送处理逻辑
@@ -137,6 +163,11 @@ func (p *People) SendPump() {
 
 // 用户退出
 func (p *People) Exit() {
+
+	p.mutex.Lock()
+	p.isExit = true
+	p.mutex.Unlock()
+
 	close(p.send)
 }
 
@@ -145,6 +176,7 @@ func NewPeople(conn *websocket.Conn) *People {
 	p := &People{
 		Conn: conn,
 		send: make(chan *Message, 256),
+		isExit: false,
 	}
 
 	go p.ReadPump()

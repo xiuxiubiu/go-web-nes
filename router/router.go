@@ -6,6 +6,8 @@ import (
 	"log"
 	"net-nes/game"
 	"net/http"
+	"path"
+	"path/filepath"
 )
 
 // 游戏房间实例
@@ -28,6 +30,9 @@ func InitRouter() *gin.Engine {
 	// 主页
 	r.GET("/", index)
 
+	// 游戏列表
+	r.GET("list", list)
+
 	// 游戏通信
 	r.GET("ws", ws)
 
@@ -37,6 +42,19 @@ func InitRouter() *gin.Engine {
 // 主页
 func index(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "index.html", gin.H{})
+}
+
+// 游戏列表
+func list(ctx *gin.Context) {
+
+	paths, _ := filepath.Glob("./static/roms/*.nes")
+
+	files := make([]string, len(paths))
+	for k, s := range paths {
+		files[k] = path.Base(s)
+	}
+
+	ctx.JSON(http.StatusOK, files)
 }
 
 // websocket

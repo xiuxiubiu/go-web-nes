@@ -14,6 +14,9 @@ const (
 	// 加入游戏
 	mtJoin msgType = "join"
 
+	// 开始游戏
+	mtStart msgType = "start"
+
 	// 游戏数据
 	mtData msgType = "data"
 
@@ -27,6 +30,7 @@ const (
 // 有效的消息类型
 var msgTypeMap = map[msgType]interface{}{
 	mtJoin: nil,
+	mtStart: nil,
 	mtData: nil,
 	mtDown: nil,
 	mtUp:   nil,

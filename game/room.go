@@ -83,6 +83,8 @@ func (r *Room) setPlayer(p *People) (err error) {
 	if p != nil {
 		p.Send(NewMessage([]byte("join 2")))
 		p.ReadHandle = r.playerReadHandle()
+
+		r.owner.Send(NewMessage([]byte("start ")))
 	}
 	r.player = p
 
@@ -143,7 +145,7 @@ func (r *Room) JoinListener() {
 		<-r.join
 
 		// 如果玩家1和2都不为nil
-		// 等待玩家监听协程将已退出玩家设置为nil
+		// 等待Room将已退出玩家设置为nil
 		for r.player != nil && r.owner != nil {
 			time.Sleep(10 * time.Millisecond)
 		}
