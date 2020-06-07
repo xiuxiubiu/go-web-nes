@@ -313,9 +313,10 @@
                 // 游戏数据队列
                 let dataQueue = new Array();
 
+                // 默认设置游戏渲染动画回调
                 window.requestAnimationFrame(DataAnimationFrame);
 
-                // 浏览器执行更新动画回调函数
+                // 游戏数据渲染动画回调
                 function DataAnimationFrame() {
 
                     while (true) {
