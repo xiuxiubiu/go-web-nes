@@ -366,12 +366,12 @@
                         if (this.status === 200) {
 
                             let data = JSON.parse(this.responseText);
-                            let options = '';
+                            let options = '<option value="" disabled="disabled" selected="selected">Please select a game</option>';
                             for (let i = 0; i < data.length; i++) {
                                 options += '<option value="'+data[i]+'">'+data[i]+'</option>';
                             }
                             let gameList = document.getElementById('current-game');
-                            gameList.innerHTML += options;
+                            gameList.innerHTML = options;
                             gameList.disabled = false;
 
                         } else {
