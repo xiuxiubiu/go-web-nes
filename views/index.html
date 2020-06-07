@@ -39,6 +39,7 @@
         </style>
     </head>
     <body>
+    <p id="fps"></p>
         <div id="content">
             <h1 id="message"> </h1>
             <p id="games-list">
@@ -133,6 +134,8 @@
                         audioWriteCursor = (audioWriteCursor + 1) & sampleMask;
                     },
                 });
+                nes.opts.preferredFrameRate = 30;
+                nes.frameTime = 1000 / 30;
 
                 // 启动nes模拟器
                 function nesBoot(rom) {
@@ -291,7 +294,18 @@
 
                         // 游戏画面数据
                         case 'data':
-                            dataQueue[dataQueue.length] = data;
+
+                            // 队列最多储存10条游戏数据超过则抛弃
+                            // 防止浏览器休眠重新唤醒后渲染的游戏数据过多
+                            if (dataQueue.length >= 10) {
+                                dataQueue.shift()
+                            }
+
+                            // 队尾压入游戏数据
+                            dataQueue[dataQueue.length] = {
+                                data: data,
+                                time: (new Date()).getTime()
+                            };
                             break;
                     }
                 };
@@ -304,21 +318,39 @@
                 // 浏览器执行更新动画回调函数
                 function DataAnimationFrame() {
 
-                    let data = dataQueue.shift();
-                    if (data !== undefined) {
+                    while (true) {
+
+                        // 队列为空退出循环
+                        let data = dataQueue.shift();
+                        if (data === undefined) {
+                            break;
+                        }
+
+                        // 抛弃延迟大于3帧的数据
+                        // (1000 / 60)为60帧每帧的刷新时间
+                        let now = (new Date()).getTime();
+                        if (now - data.time > (1000 / 60) * 3) {
+                            continue;
+                        }
+
+                        // 渲染游戏数据
                         let image = new Image();
-                        image.onload = function() {
+
+                        // 渲染游戏数据成功后再渲染下一帧数据
+                        // 防止下一帧数据渲染时
+                        // 当前帧数渲染还未完成
+                        // 因此造成游戏卡顿
+                        image.onload = () => {
                             canvasCtx.drawImage(image ,0 ,0);
                             window.requestAnimationFrame(DataAnimationFrame);
                         };
-                        image.src = data;
+                        image.src = data.data;
                         return;
                     }
 
+                    // 设置下一帧的回调函数
                     window.requestAnimationFrame(DataAnimationFrame);
                 }
-
-
 
                 // 加载游戏列表
                 let loadGameList = () => {
