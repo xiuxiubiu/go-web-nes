@@ -23,8 +23,7 @@ func InitRouter() *gin.Engine {
 	r := gin.Default()
 
 	// 静态资源
-	r.Static("/js", "./static/js")
-	r.Static("/roms", "./static/roms")
+	r.Static("/roms", "./roms")
 	r.LoadHTMLGlob("views/*")
 
 	// 主页
