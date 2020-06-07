@@ -54,7 +54,7 @@
         </div>
         <script>
 
-            (() => {
+            (function () {
 
                 // 游戏屏幕宽
                 let screenWidth = 256;
@@ -78,6 +78,15 @@
                 // 音频数据读取大小
                 let audioReadCursor = 0;
 
+                // nes游戏渲染id
+                let nesAnimationId;
+
+                // 游戏数据渲染动画id
+                let dataAnimationId;
+
+                // 游戏数据队列
+                let dataQueue = [];
+
                 // 创建绘图环境
                 let canvas = document.getElementById('canvas');
                 let canvasCtx = canvas.getContext('2d');
@@ -99,7 +108,7 @@
                 // 处理音频
                 let audioCtx = ctx = new(window.AudioContext || window.webkitAudioContext);
                 let scriptProcessor = audioCtx.createScriptProcessor(audioBufferSize, 0, 2);
-                scriptProcessor.onaudioprocess = (ev) => {
+                scriptProcessor.onaudioprocess = function (ev) {
 
                     let dst = ev.outputBuffer;
                     let len = dst.length;
@@ -109,10 +118,10 @@
                         nes.frame();
                     }
 
-                    var dstLeft = dst.getChannelData(0);
-                    var dstRight = dst.getChannelData(1);
-                    for(var i = 0; i < len; i++){
-                        var srcIndex = (audioReadCursor + i) & sampleMask;
+                    let dstLeft = dst.getChannelData(0);
+                    let dstRight = dst.getChannelData(1);
+                    for(let i = 0; i < len; i++){
+                        let srcIndex = (audioReadCursor + i) & sampleMask;
                         dstLeft[i] = audioSamplesLeft[srcIndex];
                         dstRight[i] = audioSamplesRight[srcIndex];
                     }
@@ -123,12 +132,12 @@
 
                 // 实例NES模拟器
                 let nes = new jsnes.NES({
-                    onFrame: (frameBuffer24) => {
-                        for (var i = 0; i < frameBufferSize; i++) {
+                    onFrame: function (frameBuffer24) {
+                        for (let i = 0; i < frameBufferSize; i++) {
                             frameBufferUint32[i] = 0xFF000000 | frameBuffer24[i];
                         }
                     },
-                    onAudioSample: (left, right) => {
+                    onAudioSample: function (left, right) {
                         audioSamplesLeft[audioWriteCursor] = left;
                         audioSamplesRight[audioWriteCursor] = right;
                         audioWriteCursor = (audioWriteCursor + 1) & sampleMask;
@@ -139,16 +148,24 @@
 
                 // 启动nes模拟器
                 function nesBoot(rom) {
+
+                    // 停止nes动画渲染
+                    window.cancelAnimationFrame(nesAnimationId);
+
+                    // 停止游戏数据渲染
+                    window.cancelAnimationFrame(dataAnimationId);
+
+                    // 加载游戏
                     nes.loadROM(rom);
 
                     // 告诉浏览器希望执行一个动画
                     // 要求浏览器在下次重绘之前调用指定的回调函数更新动画
-                    window.requestAnimationFrame(onAnimationFrame);
+                    nesAnimationId = window.requestAnimationFrame(onAnimationFrame);
                 }
 
                 // 浏览器执行更新动画回调函数
                 function onAnimationFrame() {
-                    window.requestAnimationFrame(onAnimationFrame);
+                    nesAnimationId = window.requestAnimationFrame(onAnimationFrame);
 
                     image.data.set(frameBufferUint8);
                     canvasCtx.putImageData(image, 0, 0);
@@ -256,12 +273,12 @@
                 let ws = new WebSocket("ws://" + window.location.host + "/ws");
 
                 // 接收消息
-                ws.onmessage = (msg) => {
+                ws.onmessage = function (msg) {
 
                     // 分解命令和消息
-                    var parts = msg.data.split(" ");
-                    var cmd = parts[0];
-                    var data = parts[1];
+                    let parts = msg.data.split(" ");
+                    let cmd = parts[0];
+                    let data = parts[1];
 
                     switch (cmd) {
 
@@ -278,8 +295,13 @@
 
                         // 开始游戏
                         case 'start':
+
+                            // 修改提示数据
                             document.getElementById('message').innerText = '请选择游戏';
+
+                            // 加载游戏数据
                             loadGameList();
+
                             break;
 
                         // 键盘按下事件
@@ -310,11 +332,8 @@
                     }
                 };
 
-                // 游戏数据队列
-                let dataQueue = new Array();
-
                 // 默认设置游戏渲染动画回调
-                window.requestAnimationFrame(DataAnimationFrame);
+                dataAnimationId = window.requestAnimationFrame(DataAnimationFrame);
 
                 // 游戏数据渲染动画回调
                 function DataAnimationFrame() {
@@ -341,20 +360,20 @@
                         // 防止下一帧数据渲染时
                         // 当前帧数渲染还未完成
                         // 因此造成游戏卡顿
-                        image.onload = () => {
+                        image.onload = function () {
                             canvasCtx.drawImage(image ,0 ,0);
-                            window.requestAnimationFrame(DataAnimationFrame);
+                            dataAnimationId = window.requestAnimationFrame(DataAnimationFrame);
                         };
                         image.src = data.data;
                         return;
                     }
 
                     // 设置下一帧的回调函数
-                    window.requestAnimationFrame(DataAnimationFrame);
+                    dataAnimationId = window.requestAnimationFrame(DataAnimationFrame);
                 }
 
                 // 加载游戏列表
-                let loadGameList = () => {
+                function loadGameList () {
 
                     let request = new XMLHttpRequest();
                     request.open('GET', '/list');
@@ -382,7 +401,7 @@
                 };
 
                 // 创建游戏
-                document.getElementById("current-game").addEventListener('change', () => {
+                document.getElementById("current-game").addEventListener('change', function () {
 
                     let game = document.getElementById("current-game").value;
                     let request = new XMLHttpRequest();
