@@ -46,7 +46,7 @@ func index(ctx *gin.Context) {
 // 游戏列表
 func list(ctx *gin.Context) {
 
-	paths, _ := filepath.Glob("./static/roms/*.nes")
+	paths, _ := filepath.Glob("./roms/*.nes")
 
 	files := make([]string, len(paths))
 	for k, s := range paths {
