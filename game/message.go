@@ -33,7 +33,7 @@ var msgTypeMap = map[msgType]interface{}{
 	mtStart: nil,
 	mtData: nil,
 	mtDown: nil,
-	mtUp:   nil,
+	mtUp: nil,
 }
 
 type Message struct {

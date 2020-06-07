@@ -3,7 +3,6 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>web-nes</title>
-        <script type="text/javascript" src="/js/jquery-3.5.1.min.js"></script>
         <script type="text/javascript" src="/js/jsnes.min.js"></script>
         <style>
             canvas {
@@ -54,11 +53,206 @@
         </div>
         <script>
 
-            $(() => {
+            (() => {
+
+                // 游戏屏幕宽
+                let screenWidth = 256;
+
+                // 游戏屏幕高
+                let screenHeight = 240;
+
+                // 游戏缓冲区大小
+                let frameBufferSize = screenWidth * screenHeight;
+
+                // 音频参数
+                let audioBufferSize = 512;
+                let sampleCount = 4 * 1024;
+                let sampleMask = sampleCount - 1;
+                let audioSamplesLeft = new Float32Array(sampleCount);
+                let audioSamplesRight = new Float32Array(sampleCount);
+
+                // 音频数据写入大小
+                let audioWriteCursor = 0;
+
+                // 音频数据读取大小
+                let audioReadCursor = 0;
+
+                // 创建绘图环境
+                let canvas = document.getElementById('canvas');
+                let canvasCtx = canvas.getContext('2d');
+
+                // 复制画布上的像素信息
+                let image = canvasCtx.getImageData(0, 0, screenWidth, screenHeight);
+
+                // 画布填充颜色
+                canvasCtx.fillStyle = 'black';
+
+                // 画布填充区域
+                canvasCtx.fillRect(0, 0, screenWidth, screenHeight);
+
+                // 分配运行缓冲区空间
+                let buffer = new ArrayBuffer(image.data.length);
+                let frameBufferUint8 = new Uint8ClampedArray(buffer);
+                let frameBufferUint32 = new Uint32Array(buffer);
+
+                // 处理音频
+                let audioCtx = ctx = new(window.AudioContext || window.webkitAudioContext);
+                let scriptProcessor = audioCtx.createScriptProcessor(audioBufferSize, 0, 2);
+                scriptProcessor.onaudioprocess = (ev) => {
+
+                    let dst = ev.outputBuffer;
+                    let len = dst.length;
+
+                    // Attempt to avoid buffer underruns.
+                    if((audioWriteCursor - audioReadCursor) & sampleMask < audioBufferSize) {
+                        nes.frame();
+                    }
+
+                    var dstLeft = dst.getChannelData(0);
+                    var dstRight = dst.getChannelData(1);
+                    for(var i = 0; i < len; i++){
+                        var srcIndex = (audioReadCursor + i) & sampleMask;
+                        dstLeft[i] = audioSamplesLeft[srcIndex];
+                        dstRight[i] = audioSamplesRight[srcIndex];
+                    }
+
+                    audioReadCursor = (audioReadCursor + len) & sampleMask;
+                };
+                scriptProcessor.connect(audioCtx.destination);
+
+                // 实例NES模拟器
+                let nes = new jsnes.NES({
+                    onFrame: (frameBuffer24) => {
+                        for (var i = 0; i < frameBufferSize; i++) {
+                            frameBufferUint32[i] = 0xFF000000 | frameBuffer24[i];
+                        }
+                    },
+                    onAudioSample: (left, right) => {
+                        audioSamplesLeft[audioWriteCursor] = left;
+                        audioSamplesRight[audioWriteCursor] = right;
+                        audioWriteCursor = (audioWriteCursor + 1) & sampleMask;
+                    },
+                });
+
+                // 启动nes模拟器
+                function nesBoot(rom) {
+                    nes.loadROM(rom);
+
+                    // 告诉浏览器希望执行一个动画
+                    // 要求浏览器在下次重绘之前调用指定的回调函数更新动画
+                    window.requestAnimationFrame(onAnimationFrame);
+                }
+
+                // 浏览器执行更新动画回调函数
+                function onAnimationFrame() {
+                    window.requestAnimationFrame(onAnimationFrame);
+
+                    image.data.set(frameBufferUint8);
+                    canvasCtx.putImageData(image, 0, 0);
+                    ws.send("data " + canvas.toDataURL());
+                    nes.frame();
+                }
+
+                // 键盘映射
+                function keyboard(callback, keyCode, player) {
+
+                    switch (keyCode) {
+
+                        // Up
+                        case 87:
+                            callback(player, jsnes.Controller.BUTTON_UP);
+                            break;
+
+                        // Down
+                        case 83:
+                            callback(player, jsnes.Controller.BUTTON_DOWN);
+                            break;
+
+                        // Left
+                        case 65:
+                            callback(player, jsnes.Controller.BUTTON_LEFT);
+                            break;
+
+                        // Right
+                        case 68:
+                            callback(player, jsnes.Controller.BUTTON_RIGHT);
+                            break;
+
+                        // 'a' - qwerty, dvorak
+                        // case 65:
+
+                        // 'q' - azerty
+                        case 75:
+                            callback(player, jsnes.Controller.BUTTON_A);
+                            break;
+
+                        // 's' - qwerty, azerty
+                        // case 83:
+
+                        // 'o' - dvorak
+                        case 74:
+                            callback(player, jsnes.Controller.BUTTON_B);
+                            break;
+
+                        // Tab
+                        case 86:
+                            callback(player, jsnes.Controller.BUTTON_SELECT);
+                            break;
+
+                        // Return
+                        case 66:
+                            callback(player, jsnes.Controller.BUTTON_START);
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+
+                // 按键列表
+                let keyCodeArray = [
+                    87, 83, 65, 68, 75, 74, 86, 66
+                ];
+
+                // 键盘按下事件
+                document.addEventListener('keydown', function (evt) {
+
+                    let keyCode = evt.keyCode;
+
+                    if (window.player === 1) {
+                        keyboard(nes.buttonDown, keyCode, window.player)
+                    }
+
+                    // 玩家2发送数据给玩家1
+                    if (window.player === 2 && keyCodeArray.indexOf(keyCode) > -1) {
+                        evt.preventDefault();
+                        ws.send("down "+keyCode);
+                    }
+
+                });
+
+                // 键盘抬起事件
+                document.addEventListener('keyup', function (evt) {
+
+                    let keyCode = evt.keyCode;
+
+                    // 玩家1触发操作
+                    if (window.player === 1) {
+                        keyboard(nes.buttonUp, keyCode, window.player)
+                    }
+
+                    // 玩家2发送数据给玩家1
+                    if (window.player === 2 && keyCodeArray.indexOf(keyCode) > -1) {
+                        evt.preventDefault();
+                        ws.send("up "+keyCode);
+                    }
+
+                });
 
                 // 连接服务器
-                ws = new WebSocket("ws://" + window.location.host + "/ws");
+                let ws = new WebSocket("ws://" + window.location.host + "/ws");
 
+                // 接收消息
                 ws.onmessage = (msg) => {
 
                     // 分解命令和消息
@@ -70,23 +264,19 @@
 
                         // 加入游戏
                         case 'join':
-
                             window.player = parseInt(data, 10);
                             if (window.player === 1) {
-                                $('#message').text('请等待玩家2')
+                                document.getElementById('message').innerText = '请等待玩家2';
                             }
                             if (window.player === 2) {
-                                $('#message').text('请等待玩家1开始游戏')
+                                document.getElementById('message').innerText = '请等待玩家1开始游戏';
                             }
-
                             break;
 
                         // 开始游戏
                         case 'start':
-
-                            $('#message').text('请选择游戏');
-                            loadGames();
-
+                            document.getElementById('message').innerText = '请选择游戏';
+                            loadGameList();
                             break;
 
                         // 键盘按下事件
@@ -96,43 +286,88 @@
 
                         // 键盘抬起事件
                         case 'up':
-                            keyboard(nes.buttonUp(), parseInt(data, 10), 2);
+                            keyboard(nes.buttonUp, parseInt(data, 10), 2);
                             break;
 
                         // 游戏画面数据
                         case 'data':
-                            var img = new Image();
-                            img.src = data;
-                            canvasCtx.putImageData(img.data ,0 ,0);
+                            dataQueue[dataQueue.length] = data;
                             break;
-
-
                     }
                 };
 
+                // 游戏数据队列
+                let dataQueue = new Array();
+
+                window.requestAnimationFrame(DataAnimationFrame);
+
+                // 浏览器执行更新动画回调函数
+                function DataAnimationFrame() {
+
+                    let data = dataQueue.shift();
+                    if (data !== undefined) {
+                        let image = new Image();
+                        image.onload = function() {
+                            canvasCtx.drawImage(image ,0 ,0);
+                            window.requestAnimationFrame(DataAnimationFrame);
+                        };
+                        image.src = data;
+                        return;
+                    }
+
+                    window.requestAnimationFrame(DataAnimationFrame);
+                }
+
+
+
                 // 加载游戏列表
-                let loadGames = () => {
+                let loadGameList = () => {
 
-                    $.get(
-                        '/list',
-                        (data, status) => {
+                    let request = new XMLHttpRequest();
+                    request.open('GET', '/list');
+                    request.overrideMimeType('text/plain; charset=x-user-defined');
+                    request.onerror = function () {
+                        alert('http request error!');
+                    };
+                    request.onload = function () {
+                        if (this.status === 200) {
 
-                            if (status !== 'success') {
-                                alert('加载游戏列表失败，请刷新页面！');
-                                throw Error('加载游戏列表失败，请刷新页面！');
-                            }
-
+                            let data = JSON.parse(this.responseText);
                             let options = '';
-                            for (i = 0; i < data.length; i++) {
+                            for (let i = 0; i < data.length; i++) {
                                 options += '<option value="'+data[i]+'">'+data[i]+'</option>';
                             }
-                            $('#current-game').append(options)
-                        },
-                        'json'
-                    );
+                            let gameList = document.getElementById('current-game');
+                            gameList.innerHTML += options;
+                            gameList.disabled = false;
 
+                        } else {
+                            this.onerror();
+                        }
+                    };
+                    request.send();
                 };
-            })
+
+                // 创建游戏
+                document.getElementById("current-game").addEventListener('change', () => {
+
+                    let game = document.getElementById("current-game").value;
+                    let request = new XMLHttpRequest();
+                    request.open('GET', '/roms/' + game);
+                    request.overrideMimeType('text/plain; charset=x-user-defined');
+                    request.onerror = function () {
+                        alert('http request error!');
+                    };
+                    request.onload = function () {
+                        if (this.status === 200) {
+                            nesBoot(this.responseText);
+                        } else {
+                            this.onerror();
+                        }
+                    };
+                    request.send();
+                });
+            })()
 
 
 

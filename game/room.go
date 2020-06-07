@@ -62,7 +62,9 @@ func (r *Room) ownerReadHandle() func(message []byte) {
 		if msg.mt == mtData {
 
 			// 优先发送给玩家2
-			r.player.Send(msg)
+			if r.player != nil {
+				r.player.Send(msg)
+			}
 
 			// 广播给观战者
 			r.broadcast <- msg.data
