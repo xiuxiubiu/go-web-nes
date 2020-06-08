@@ -1,4 +1,4 @@
-module net-nes
+module go-web-nes
 
 go 1.14
 
