@@ -29,11 +29,11 @@ const (
 
 // 有效的消息类型
 var msgTypeMap = map[msgType]interface{}{
-	mtJoin: nil,
+	mtJoin:  nil,
 	mtStart: nil,
-	mtData: nil,
-	mtDown: nil,
-	mtUp: nil,
+	mtData:  nil,
+	mtDown:  nil,
+	mtUp:    nil,
 }
 
 type Message struct {

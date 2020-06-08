@@ -3,8 +3,8 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"go-web-nes/game"
 	"log"
-	"net-nes/game"
 	"net/http"
 	"path"
 	"path/filepath"

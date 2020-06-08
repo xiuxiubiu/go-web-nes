@@ -174,8 +174,8 @@ func (p *People) Exit() {
 func NewPeople(conn *websocket.Conn) *People {
 
 	p := &People{
-		Conn: conn,
-		send: make(chan *Message, 256),
+		Conn:   conn,
+		send:   make(chan *Message, 256),
 		isExit: false,
 	}
 

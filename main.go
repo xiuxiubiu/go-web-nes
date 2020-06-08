@@ -1,8 +1,8 @@
 package main
 
 import (
+	"go-web-nes/router"
 	"log"
-	"net-nes/router"
 	"net/http"
 )
 
