@@ -83,6 +83,11 @@ func (p *People) ReadPump() {
 
 	for {
 
+		// 设置读取超时时间
+		if err := p.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+
+		}
+
 		// 读取消息
 		_, message, err := p.Conn.ReadMessage()
 		if err != nil {
