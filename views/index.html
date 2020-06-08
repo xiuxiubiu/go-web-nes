@@ -106,7 +106,7 @@
                 let frameBufferUint32 = new Uint32Array(buffer);
 
                 // 处理音频
-                let audioCtx = ctx = new(window.AudioContext || window.webkitAudioContext);
+                let audioCtx = new(window.AudioContext || window.webkitAudioContext);
                 let scriptProcessor = audioCtx.createScriptProcessor(audioBufferSize, 0, 2);
                 scriptProcessor.onaudioprocess = function (ev) {
 
@@ -143,8 +143,6 @@
                         audioWriteCursor = (audioWriteCursor + 1) & sampleMask;
                     },
                 });
-                nes.opts.preferredFrameRate = 30;
-                nes.frameTime = 1000 / 30;
 
                 // 启动nes模拟器
                 function nesBoot(rom) {
