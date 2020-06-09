@@ -18,6 +18,8 @@ git@github.com:xiuxiubiu/go-web-nes.git
 go get ./...
 
 go build
+
+./go-web-nes
 ```
 
 ## 联机
