@@ -15,6 +15,8 @@ Go + jsnes 实现的网页版NES联机、观战服务
 ```
 git clone git@github.com:xiuxiubiu/go-web-nes.git
 
+cd ./go-web-nes
+
 go get ./...
 
 go build
