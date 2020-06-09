@@ -28,4 +28,4 @@ go build
 
 * 玩家1退出，玩家2升级为玩家1，根据观战玩家加入顺序，提升为玩家2
 
-![](https://github.com/xiuxiubiu/pictures/raw/master/go-web-nes/online.gif)
+<img alt="联机演示" src="https://github.com/xiuxiubiu/pictures/raw/master/go-web-nes/online.gif" width="100%" />
