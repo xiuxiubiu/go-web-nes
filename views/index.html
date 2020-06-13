@@ -375,7 +375,6 @@
 
                     let request = new XMLHttpRequest();
                     request.open('GET', '/list');
-                    request.overrideMimeType('text/plain; charset=x-user-defined');
                     request.onerror = function () {
                         alert('http request error!');
                     };
